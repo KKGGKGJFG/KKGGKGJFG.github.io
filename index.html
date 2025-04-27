@@ -7,11 +7,9 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
+            font-family: Arial, sans-serif;
             padding: 20px;
             background: #f5f5f5;
-            color: #333;
         }
         .container {
             max-width: 600px;
@@ -21,13 +19,13 @@
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        textarea, input {
+        textarea {
             width: 100%;
             padding: 12px;
-            margin: 8px 0;
+            margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 16px;
+            resize: vertical;
         }
         button {
             background: #2481cc;
@@ -37,122 +35,49 @@
             border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
-            margin-top: 10px;
         }
-        .response {
+        #response {
             margin-top: 20px;
             padding: 15px;
             background: #f9f9f9;
             border-radius: 8px;
-            white-space: pre-wrap;
-        }
-        .admin-panel {
             display: none;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🤖 AI Ассистент</h1>
-        
-        <div id="user-view">
-            <p>Задайте ваш вопрос:</p>
-            <textarea id="user-question" rows="5" placeholder="Напишите ваш запрос здесь..."></textarea>
-            <button id="ask-btn">Отправить</button>
-            <div id="response" class="response" style="display: none;"></div>
-            
-            <div id="subscription-info">
-                <p>Статус подписки: <span id="sub-status">Загрузка...</span></p>
-                <button id="subscribe-btn" style="display: none;">Оформить подписку</button>
-            </div>
-        </div>
-        
-        <div id="admin-view" class="admin-panel">
-            <h2>Админ-панель</h2>
-            <div>
-                <label>Цена подписки (руб):</label>
-                <input type="number" id="price-input" value="299">
-                <button id="set-price-btn">Сохранить</button>
-            </div>
-        </div>
+        <h1>🤖 AI Assistant</h1>
+        <textarea id="prompt" placeholder="Введите ваш запрос..."></textarea>
+        <button id="send-btn">Отправить</button>
+        <div id="response"></div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.BackButton.hide();
         
-        // Проверка прав администратора
-        const initData = tg.initDataUnsafe;
-        const isAdmin = initData.user && [123456789].includes(initData.user.id);
-        
-        if (isAdmin) {
-            document.getElementById('admin-view').style.display = 'block';
-            document.getElementById('price-input').value = '299'; // Можно загрузить текущую цену
-        }
-        
-        // Элементы интерфейса
-        const askBtn = document.getElementById('ask-btn');
-        const subscribeBtn = document.getElementById('subscribe-btn');
-        const responseDiv = document.getElementById('response');
-        
-        // Проверка подписки
-        function checkSubscription() {
-            // Здесь можно добавить проверку через бота
-            return true;
-        }
-        
-        // Обработка вопросов
-        askBtn.addEventListener('click', async () => {
-            const question = document.getElementById('user-question').value.trim();
-            if (!question) return;
+        document.getElementById('send-btn').addEventListener('click', () => {
+            const prompt = document.getElementById('prompt').value.trim();
+            if (!prompt) return;
             
-            if (!checkSubscription()) {
-                responseDiv.textContent = "❌ Для использования необходим активная подписка!";
-                responseDiv.style.display = 'block';
-                subscribeBtn.style.display = 'inline-block';
-                return;
-            }
-            
-            responseDiv.textContent = "⌛ Обработка запроса...";
+            const responseDiv = document.getElementById('response');
             responseDiv.style.display = 'block';
+            responseDiv.textContent = "⌛ Обработка...";
             
             // Отправляем запрос через бота
             tg.sendData(JSON.stringify({
                 type: 'gpt_request',
-                content: question
+                prompt: prompt
             }));
+            
+            // Обработка ответа будет через бота (см. web_app_data в Python-коде)
         });
         
-        // Админские функции
-        document.getElementById('set-price-btn').addEventListener('click', () => {
-            const newPrice = document.getElementById('price-input').value;
-            tg.sendData(JSON.stringify({
-                type: 'admin_command',
-                command: 'set_price',
-                value: newPrice
-            }));
-            tg.showAlert("Цена успешно изменена!");
+        // Можно добавить обработку ответов прямо в Web App
+        tg.onEvent('webAppDataReceived', (event) => {
+            console.log('Data received:', event);
         });
-        
-        // Подписка
-        subscribeBtn.addEventListener('click', () => {
-            tg.sendData(JSON.stringify({
-                type: 'subscription_request'
-            }));
-            tg.close();
-        });
-        
-        // Инициализация
-        if (checkSubscription()) {
-            document.getElementById('sub-status').textContent = "✅ Активна";
-        } else {
-            document.getElementById('sub-status').textContent = "❌ Не активна";
-            subscribeBtn.style.display = 'inline-block';
-        }
     </script>
 </body>
 </html>
